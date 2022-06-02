@@ -46,32 +46,53 @@ fn energy_end() {
 // which has to implement the trait. The advantage is that we could return A as well in bench. So it would become bench<F, A>(function: F, bencher: A) -> A,
 // where A: impl Bencher
 
-#[derive(Debug)]
-pub struct Bencher {}
+// Does start and end really need mutable self?
+// Maybe they could be start(self) -> Self instead
+pub trait Bencher {
+    fn start(&mut self);
+    fn end(&mut self);
+}
 
-impl Bencher {
-    pub fn bench<F>(function: F) -> BenchResult
-    where
-        F: Fn(),
-    {
-        energy_begin();
-        let start = ProcessTime::now();
-        function();
-        energy_end();
+pub struct CpuTimeBencher {
+    start: Option<ProcessTime>,
+    cpu_time: Option<Duration>,
+}
 
-        BenchResult {
-            cpu_time: start.elapsed(),
+impl CpuTimeBencher {
+    pub fn new() -> Self {
+        Self {
+            start: None,
+            cpu_time: None,
         }
+    }
+
+    // Returns the active cpu_time used. Panics if called before Bencher::start is called.
+    pub fn cpu_time(&self) -> Duration {
+        self.cpu_time.unwrap()
+    }
+}
+
+impl Bencher for CpuTimeBencher {
+    fn start(&mut self) {
+        self.start = Some(ProcessTime::now());
+    }
+
+    fn end(&mut self) {
+        self.cpu_time = Some(self.start.unwrap().elapsed());
     }
 }
 
 #[derive(Debug)]
-pub struct BenchResult {
-    cpu_time: Duration,
-}
+pub struct BenchSuite {}
 
-impl BenchResult {
-    pub fn cpu_time(&self) -> Duration {
-        self.cpu_time
+impl BenchSuite {
+    pub fn bench<F, B>(function: F, bencher: &mut B)
+    where
+        F: Fn(),
+        B: Bencher,
+    {
+        bencher.start();
+        function();
+        bencher.end();
     }
 }
