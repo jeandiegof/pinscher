@@ -22,11 +22,17 @@ impl CpuTimeBencher {
 }
 
 impl Bencher for CpuTimeBencher {
-    fn start(&mut self) {
-        self.start = Some(ProcessTime::now());
+    fn start(self) -> Self {
+        Self {
+            start: Some(ProcessTime::now()),
+            ..self
+        }
     }
 
-    fn end(&mut self) {
-        self.cpu_time = Some(self.start.unwrap().elapsed());
+    fn end(self) -> Self {
+        Self {
+            cpu_time: Some(self.start.unwrap().elapsed()),
+            ..self
+        }
     }
 }
