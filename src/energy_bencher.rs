@@ -1,5 +1,5 @@
 use crate::bencher::Bencher;
-use powercap::{DomainSnapshot, IntelRapl, IntelRaplSnapshot, SocketSnapshot};
+use powercap::{DomainSnapshot, IntelRapl, IntelRaplSnapshot, PowerCap, SocketSnapshot};
 
 pub struct EnergyBencher {
     intel_rapl: IntelRapl,
@@ -11,6 +11,7 @@ pub struct EnergyBencher {
 
 // TODO: overflow handling?? there's socket max range
 // TODO: options for core energy and package energy?
+// TODO: error handling (implies changing the signature of the crate)
 impl EnergyBencher {
     pub fn new() -> Self {
         Self {
@@ -40,15 +41,30 @@ impl EnergyBencher {
     fn calculate_package_energy_consumption(&mut self) {
         let snapshot_begin = Self::package_snapshot(self.start_energy_snapshot.as_ref().unwrap());
         let snapshot_end = Self::package_snapshot(self.end_energy_snapshot.as_ref().unwrap());
+        let max = snapshot_end
+            .max_energy_range
+            .max(snapshot_begin.max_energy_range);
 
-        self.package_energy = snapshot_end.energy - snapshot_begin.energy;
+        self.package_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
     }
 
     fn calculate_core_energy_consumption(&mut self) {
         let snapshot_begin = Self::core_snapshot(self.start_energy_snapshot.as_ref().unwrap());
         let snapshot_end = Self::core_snapshot(self.end_energy_snapshot.as_ref().unwrap());
+        let max = snapshot_end
+            .max_energy_range
+            .max(snapshot_begin.max_energy_range);
 
-        self.core_energy = snapshot_end.energy - snapshot_begin.energy;
+        self.core_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
+    }
+
+    /// Calculates a - b considering that the two values vary in a range [0, max_value]
+    fn overflow_sub(a: u64, b: u64, max_value: u64) -> u64 {
+        if a >= b {
+            a - b
+        } else {
+            max_value - (b - a)
+        }
     }
 
     fn package_snapshot(snapshot: &IntelRaplSnapshot) -> &SocketSnapshot {
@@ -65,7 +81,6 @@ impl EnergyBencher {
 }
 
 impl Bencher for EnergyBencher {
-    // TODO: change the signature of the trait to return a result
     fn start(&mut self) {
         self.start_energy_snapshot = self.intel_rapl.snapshot().ok();
     }
@@ -74,38 +89,4 @@ impl Bencher for EnergyBencher {
         self.end_energy_snapshot = self.intel_rapl.snapshot().ok();
         self.calculate_energy_consumption();
     }
-}
-
-use powercap::PowerCap;
-
-fn energy_begin() {
-    let intel_rapl = PowerCap::try_default().unwrap().intel_rapl;
-
-    // this is supposed to be intel-rapl/intel-rapl:0, which is "package"
-    // cat /sys/class/powercap/intel-rapl/intel-rapl:0/name
-    let package = intel_rapl.sockets.get(&0).unwrap();
-    let package_energy = package.energy().unwrap();
-
-    // this is supposed to be intel-rapl/intel-rapl:0/intel-rapl:0:0, which is "core"
-    // cat /sys/class/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/name
-    let core = package.domains.get(&0).unwrap();
-    let core_energy = core.energy().unwrap();
-
-    // println!("{:#?}", powercap.intel_rapl.snapshot());
-    println!("package: {:?} core: {:?}", package_energy, core_energy);
-    assert!(package_energy > core_energy);
-
-    // TODO: which values are we interested in? How could we generalize it for other processors?
-    // Mine has only two the package and the core, but others may have more sensors.
-    // How to customize the bench so that we can use custom benchers that return different types of BenchResult?
-    // If we have a CpuTimeBencher and a EnergyBencher, we could have CpuTimeBenchResult and EnergyBenchResult, but that
-    // wouldn't scale well.
-    // At the end, what matters for us to be able to serialize a BenchResult. If that's true, Bencher::bench could return
-    // something that implements a serializable trait.
-}
-
-fn energy_end() {
-    let powercap = PowerCap::try_default().unwrap();
-    println!("Total energy: {:?} uJ", powercap.intel_rapl.total_energy());
-    // println!("{:#?}", powercap);
 }
