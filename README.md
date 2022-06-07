@@ -6,14 +6,14 @@ A small benchmarking crate.
 
 Add this to your `Cargo.toml` file:
 
-```
+```toml
 [dependencies]
 pinscher = { git = "https://github.com/jeandiegof/pinscher" } 
 ```
 
 And then:
 
-```Rust
+```rust
 use pinscher::{BenchSuite, CpuTimeBencher, EnergyBencher};
 
 fn main() {
