@@ -13,21 +13,21 @@
 // Does start and end really need mutable self?
 // Maybe they could be start(self) -> Self instead
 pub trait Bencher {
-    fn start(self) -> Self;
-    fn end(self) -> Self;
+    fn start(&mut self);
+    fn end(&mut self);
 }
 
 #[derive(Debug)]
 pub struct BenchSuite {}
 
 impl BenchSuite {
-    pub fn bench<F, B>(function: F, bencher: B) -> B
+    pub fn bench<F, B>(function: F, bencher: &mut B)
     where
         F: Fn(),
         B: Bencher,
     {
-        let started_bencher = bencher.start();
+        bencher.start();
         function();
-        started_bencher.end()
+        bencher.end();
     }
 }
