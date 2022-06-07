@@ -2,7 +2,7 @@ use crate::Error;
 
 pub trait Bencher {
     fn start(&mut self) -> Result<(), Error>;
-    fn end(&mut self) -> Result<(), Error>;
+    fn stop(&mut self) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
@@ -16,7 +16,7 @@ impl BenchSuite {
     {
         bencher.start()?;
         function();
-        bencher.end()?;
+        bencher.stop()?;
 
         Ok(())
     }

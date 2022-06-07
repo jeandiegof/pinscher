@@ -3,8 +3,8 @@ use powercap::{DomainSnapshot, IntelRapl, IntelRaplSnapshot, PowerCap, SocketSna
 
 pub struct EnergyBencher {
     intel_rapl: IntelRapl,
-    start_energy_snapshot: Option<IntelRaplSnapshot>,
-    end_energy_snapshot: Option<IntelRaplSnapshot>,
+    first_snapshot: Option<IntelRaplSnapshot>,
+    final_snapshot: Option<IntelRaplSnapshot>,
     package_energy: u64,
     core_energy: u64,
 }
@@ -13,8 +13,8 @@ impl EnergyBencher {
     pub fn new() -> Result<Self, Error> {
         Ok(Self {
             intel_rapl: PowerCap::try_default()?.intel_rapl,
-            start_energy_snapshot: None,
-            end_energy_snapshot: None,
+            first_snapshot: None,
+            final_snapshot: None,
             package_energy: 0,
             core_energy: 0,
         })
@@ -38,8 +38,8 @@ impl EnergyBencher {
     }
 
     fn calculate_package_energy_consumption(&mut self) -> Result<(), Error> {
-        let snapshot_begin = Self::package_snapshot(self.start_energy_snapshot.as_ref().unwrap())?;
-        let snapshot_end = Self::package_snapshot(self.end_energy_snapshot.as_ref().unwrap())?;
+        let snapshot_begin = Self::package_snapshot(self.first_snapshot.as_ref().unwrap())?;
+        let snapshot_end = Self::package_snapshot(self.final_snapshot.as_ref().unwrap())?;
         let max = snapshot_end.max_energy_range;
 
         self.package_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
@@ -48,8 +48,8 @@ impl EnergyBencher {
     }
 
     fn calculate_core_energy_consumption(&mut self) -> Result<(), Error> {
-        let snapshot_begin = Self::core_snapshot(self.start_energy_snapshot.as_ref().unwrap())?;
-        let snapshot_end = Self::core_snapshot(self.end_energy_snapshot.as_ref().unwrap())?;
+        let snapshot_begin = Self::core_snapshot(self.first_snapshot.as_ref().unwrap())?;
+        let snapshot_end = Self::core_snapshot(self.final_snapshot.as_ref().unwrap())?;
         let max = snapshot_end.max_energy_range;
 
         self.core_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
@@ -85,13 +85,13 @@ impl EnergyBencher {
 
 impl Bencher for EnergyBencher {
     fn start(&mut self) -> Result<(), Error> {
-        self.start_energy_snapshot = Some(self.intel_rapl.snapshot()?);
+        self.first_snapshot = Some(self.intel_rapl.snapshot()?);
 
         Ok(())
     }
 
-    fn end(&mut self) -> Result<(), Error> {
-        self.end_energy_snapshot = Some(self.intel_rapl.snapshot()?);
+    fn stop(&mut self) -> Result<(), Error> {
+        self.final_snapshot = Some(self.intel_rapl.snapshot()?);
         self.calculate_energy_consumption()?;
 
         Ok(())

@@ -34,7 +34,7 @@ impl Bencher for CpuTimeBencher {
         Ok(())
     }
 
-    fn end(&mut self) -> Result<(), Error> {
+    fn stop(&mut self) -> Result<(), Error> {
         self.cpu_time = Some(self.start.ok_or(Error::TimeBencherNotStarted)?.elapsed());
 
         Ok(())
