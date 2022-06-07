@@ -15,7 +15,7 @@ impl CpuTimeBencher {
         }
     }
 
-    /// Returns the active cpu_time used.
+    /// Returns the active CPU time consumed by the function being benchmarked.
     pub fn cpu_time(&self) -> Result<Duration, Error> {
         self.cpu_time.ok_or(Error::BencherNotStopped)
     }
