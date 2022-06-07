@@ -59,11 +59,7 @@ impl EnergyBencher {
 
     /// Calculates a - b considering that the two values vary in a range [0, max_value]
     fn overflow_sub(a: u64, b: u64, max_value: u64) -> u64 {
-        if a >= b {
-            a - b
-        } else {
-            max_value - (b - a)
-        }
+        a.checked_sub(b).unwrap_or(max_value - (b - a))
     }
 
     fn package_snapshot(snapshot: &IntelRaplSnapshot) -> Result<&SocketSnapshot, Error> {
