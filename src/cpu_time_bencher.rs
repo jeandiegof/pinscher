@@ -1,4 +1,4 @@
-use crate::bencher::Bencher;
+use crate::{Bencher, Error};
 use cpu_time::ProcessTime;
 use std::time::Duration;
 
@@ -15,18 +15,29 @@ impl CpuTimeBencher {
         }
     }
 
-    // Returns the active cpu_time used. Panics if called before Bencher::start is called.
+    /// Returns the active cpu_time used.
     pub fn cpu_time(&self) -> Duration {
         self.cpu_time.unwrap()
     }
 }
 
+impl Default for CpuTimeBencher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Bencher for CpuTimeBencher {
-    fn start(&mut self) {
+    fn start(&mut self) -> Result<(), Error> {
         self.start = Some(ProcessTime::now());
+
+        Ok(())
     }
 
-    fn end(&mut self) {
-        self.cpu_time = Some(self.start.unwrap().elapsed())
+    fn end(&mut self) -> Result<(), Error> {
+        // TODO: return an error instead of unwrapping
+        self.cpu_time = Some(self.start.unwrap().elapsed());
+
+        Ok(())
     }
 }

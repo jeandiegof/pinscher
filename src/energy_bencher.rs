@@ -1,4 +1,4 @@
-use crate::bencher::Bencher;
+use crate::{Bencher, Error};
 use powercap::{DomainSnapshot, IntelRapl, IntelRaplSnapshot, PowerCap, SocketSnapshot};
 
 pub struct EnergyBencher {
@@ -9,53 +9,52 @@ pub struct EnergyBencher {
     core_energy: u64,
 }
 
-// TODO: overflow handling?? there's socket max range
-// TODO: options for core energy and package energy?
-// TODO: error handling (implies changing the signature of the crate)
 impl EnergyBencher {
-    pub fn new() -> Self {
-        Self {
-            intel_rapl: PowerCap::try_default().unwrap().intel_rapl,
+    pub fn new() -> Result<Self, Error> {
+        Ok(Self {
+            intel_rapl: PowerCap::try_default()?.intel_rapl,
             start_energy_snapshot: None,
             end_energy_snapshot: None,
             package_energy: 0,
             core_energy: 0,
-        }
+        })
     }
 
-    /// Returns the energy consumed by the package between start and end
+    /// Returns the energy consumed by the package between start and end in micro Joules
     pub fn package_energy(&self) -> u64 {
         self.package_energy
     }
 
-    /// Returns the energy consumed by the core between start and end
+    /// Returns the energy consumed by the core between start and end in micro Joules
     pub fn core_energy(&self) -> u64 {
         self.core_energy
     }
 
-    fn calculate_energy_consumption(&mut self) {
-        self.calculate_package_energy_consumption();
-        self.calculate_core_energy_consumption();
+    fn calculate_energy_consumption(&mut self) -> Result<(), Error> {
+        self.calculate_package_energy_consumption()?;
+        self.calculate_core_energy_consumption()?;
+
+        Ok(())
     }
 
-    fn calculate_package_energy_consumption(&mut self) {
-        let snapshot_begin = Self::package_snapshot(self.start_energy_snapshot.as_ref().unwrap());
-        let snapshot_end = Self::package_snapshot(self.end_energy_snapshot.as_ref().unwrap());
-        let max = snapshot_end
-            .max_energy_range
-            .max(snapshot_begin.max_energy_range);
+    fn calculate_package_energy_consumption(&mut self) -> Result<(), Error> {
+        let snapshot_begin = Self::package_snapshot(self.start_energy_snapshot.as_ref().unwrap())?;
+        let snapshot_end = Self::package_snapshot(self.end_energy_snapshot.as_ref().unwrap())?;
+        let max = snapshot_end.max_energy_range;
 
         self.package_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
+
+        Ok(())
     }
 
-    fn calculate_core_energy_consumption(&mut self) {
-        let snapshot_begin = Self::core_snapshot(self.start_energy_snapshot.as_ref().unwrap());
-        let snapshot_end = Self::core_snapshot(self.end_energy_snapshot.as_ref().unwrap());
-        let max = snapshot_end
-            .max_energy_range
-            .max(snapshot_begin.max_energy_range);
+    fn calculate_core_energy_consumption(&mut self) -> Result<(), Error> {
+        let snapshot_begin = Self::core_snapshot(self.start_energy_snapshot.as_ref().unwrap())?;
+        let snapshot_end = Self::core_snapshot(self.end_energy_snapshot.as_ref().unwrap())?;
+        let max = snapshot_end.max_energy_range;
 
         self.core_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
+
+        Ok(())
     }
 
     /// Calculates a - b considering that the two values vary in a range [0, max_value]
@@ -67,26 +66,34 @@ impl EnergyBencher {
         }
     }
 
-    fn package_snapshot(snapshot: &IntelRaplSnapshot) -> &SocketSnapshot {
-        snapshot.sockets.iter().find(|&s| s.id == 0).unwrap()
+    fn package_snapshot(snapshot: &IntelRaplSnapshot) -> Result<&SocketSnapshot, Error> {
+        snapshot
+            .sockets
+            .iter()
+            .find(|&s| s.id == 0)
+            .ok_or(Error::PackageEnergyNotAvailable)
     }
 
-    fn core_snapshot(snapshot: &IntelRaplSnapshot) -> &DomainSnapshot {
-        Self::package_snapshot(snapshot)
+    fn core_snapshot(snapshot: &IntelRaplSnapshot) -> Result<&DomainSnapshot, Error> {
+        Self::package_snapshot(snapshot)?
             .domains
             .iter()
             .find(|&d| d.id == 0)
-            .unwrap()
+            .ok_or(Error::CoreEnergyNotAvailable)
     }
 }
 
 impl Bencher for EnergyBencher {
-    fn start(&mut self) {
-        self.start_energy_snapshot = self.intel_rapl.snapshot().ok();
+    fn start(&mut self) -> Result<(), Error> {
+        self.start_energy_snapshot = Some(self.intel_rapl.snapshot()?);
+
+        Ok(())
     }
 
-    fn end(&mut self) {
-        self.end_energy_snapshot = self.intel_rapl.snapshot().ok();
-        self.calculate_energy_consumption();
+    fn end(&mut self) -> Result<(), Error> {
+        self.end_energy_snapshot = Some(self.intel_rapl.snapshot()?);
+        self.calculate_energy_consumption()?;
+
+        Ok(())
     }
 }

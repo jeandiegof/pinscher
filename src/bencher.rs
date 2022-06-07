@@ -1,19 +1,23 @@
+use crate::Error;
+
 pub trait Bencher {
-    fn start(&mut self);
-    fn end(&mut self);
+    fn start(&mut self) -> Result<(), Error>;
+    fn end(&mut self) -> Result<(), Error>;
 }
 
 #[derive(Debug)]
 pub struct BenchSuite {}
 
 impl BenchSuite {
-    pub fn bench<F, B>(function: F, bencher: &mut B)
+    pub fn bench<F, B>(function: F, bencher: &mut B) -> Result<(), Error>
     where
         F: Fn(),
         B: Bencher,
     {
-        bencher.start();
+        bencher.start()?;
         function();
-        bencher.end();
+        bencher.end()?;
+
+        Ok(())
     }
 }
