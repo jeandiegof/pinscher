@@ -1,3 +1,4 @@
+#[derive(Debug)]
 pub enum Error {
     FailedToAcquireEnergyData(powercap::ReadError),
     FailedToUsePowercapFramework(powercap::BuildError),
