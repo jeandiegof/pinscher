@@ -17,7 +17,7 @@ impl CpuTimeBencher {
 
     /// Returns the active cpu_time used.
     pub fn cpu_time(&self) -> Result<Duration, Error> {
-        self.cpu_time.ok_or(Error::TimeBencherNotStopped)
+        self.cpu_time.ok_or(Error::BencherNotStopped)
     }
 }
 
@@ -35,7 +35,7 @@ impl Bencher for CpuTimeBencher {
     }
 
     fn stop(&mut self) -> Result<(), Error> {
-        self.cpu_time = Some(self.start.ok_or(Error::TimeBencherNotStarted)?.elapsed());
+        self.cpu_time = Some(self.start.ok_or(Error::BencherNotStarted)?.elapsed());
 
         Ok(())
     }

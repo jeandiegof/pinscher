@@ -38,8 +38,8 @@ impl EnergyBencher {
     }
 
     fn calculate_package_energy_consumption(&mut self) -> Result<(), Error> {
-        let snapshot_begin = Self::package_snapshot(self.first_snapshot.as_ref().unwrap())?;
-        let snapshot_end = Self::package_snapshot(self.final_snapshot.as_ref().unwrap())?;
+        let snapshot_begin = Self::package_snapshot(self.first_snapshot()?)?;
+        let snapshot_end = Self::package_snapshot(self.final_snapshot()?)?;
         let max = snapshot_end.max_energy_range;
 
         self.package_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
@@ -48,8 +48,8 @@ impl EnergyBencher {
     }
 
     fn calculate_core_energy_consumption(&mut self) -> Result<(), Error> {
-        let snapshot_begin = Self::core_snapshot(self.first_snapshot.as_ref().unwrap())?;
-        let snapshot_end = Self::core_snapshot(self.final_snapshot.as_ref().unwrap())?;
+        let snapshot_begin = Self::core_snapshot(self.first_snapshot()?)?;
+        let snapshot_end = Self::core_snapshot(self.final_snapshot()?)?;
         let max = snapshot_end.max_energy_range;
 
         self.core_energy = Self::overflow_sub(snapshot_end.energy, snapshot_begin.energy, max);
@@ -80,6 +80,14 @@ impl EnergyBencher {
             .iter()
             .find(|&d| d.id == 0)
             .ok_or(Error::CoreEnergyNotAvailable)
+    }
+
+    fn first_snapshot(&self) -> Result<&IntelRaplSnapshot, Error> {
+        self.first_snapshot.as_ref().ok_or(Error::BencherNotStarted)
+    }
+
+    fn final_snapshot(&self) -> Result<&IntelRaplSnapshot, Error> {
+        self.final_snapshot.as_ref().ok_or(Error::BencherNotStopped)
     }
 }
 

@@ -3,8 +3,8 @@ pub enum Error {
     FailedToUsePowercapFramework(powercap::BuildError),
     CoreEnergyNotAvailable,
     PackageEnergyNotAvailable,
-    TimeBencherNotStarted,
-    TimeBencherNotStopped,
+    BencherNotStarted,
+    BencherNotStopped,
 }
 
 impl From<powercap::BuildError> for Error {
