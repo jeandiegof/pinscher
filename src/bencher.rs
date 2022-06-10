@@ -9,9 +9,9 @@ pub trait Bencher {
 pub struct BenchSuite {}
 
 impl BenchSuite {
-    pub fn bench<F, B>(function: F, bencher: &mut B) -> Result<(), Error>
+    pub fn bench<F, B>(mut function: F, bencher: &mut B) -> Result<(), Error>
     where
-        F: Fn(),
+        F: FnMut(),
         B: Bencher,
     {
         bencher.start()?;
