@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::{Benchable, Error};
 
 pub trait Bencher {
     fn start(&mut self) -> Result<(), Error>;
@@ -6,17 +6,21 @@ pub trait Bencher {
 }
 
 #[derive(Debug)]
-pub struct BenchSuite {}
+pub struct BenchSuite;
 
 impl BenchSuite {
-    pub fn bench<F, B>(mut function: F, bencher: &mut B) -> Result<(), Error>
+    pub fn bench<A, B>(benchable: &mut A, bencher: &mut B) -> Result<(), Error>
     where
-        F: FnMut(),
+        A: Benchable,
         B: Bencher,
     {
+        benchable.setup();
+
         bencher.start()?;
-        function();
+        benchable.execute();
         bencher.stop()?;
+
+        benchable.teardown();
 
         Ok(())
     }
