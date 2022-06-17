@@ -10,6 +10,9 @@ pub use time_bencher::TimeBencher;
 mod energy_bencher;
 pub use energy_bencher::EnergyBencher;
 
+mod all_benchers;
+pub use all_benchers::AllBenchers;
+
 mod benchable;
 pub use benchable::Benchable;
 
