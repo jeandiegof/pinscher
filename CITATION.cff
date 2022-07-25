@@ -12,6 +12,9 @@ authors:
     family-names: Silva Fontena
     email: diegofontena@gmail.com
     orcid: 'https://orcid.org/ 0000-0001-6824-2506'
+preferred-citation:
+  repository-code: "https://github.com/citation-file-format/my-research-software"
+  type: generic
 references:
-  - repository-code: "https://github.com/jeandiegof/pinscher"
+  - repository-code: "https://github.com/citation-file-format/my-research-software"
     type: generic
